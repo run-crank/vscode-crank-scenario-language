@@ -1,0 +1,61 @@
+{
+  "name": "crank-scenario-language",
+  "displayName": "Crank Scenario Language",
+  "description": "Simplifies Crank Scenario authoring.",
+  "version": "0.1.0",
+  "engines": {
+    "vscode": "^1.40.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "main": "./out/extension.js",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/run-crank/vscode-crank-scenario-language.git"
+  },
+  "publisher": "run-crank",
+  "activationEvents": [
+    "onLanguage:yaml"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "crankScenarioLanguage.runScenario",
+        "title": "Run Scenario"
+      }
+    ],
+    "menus": {
+      "editor/title/context": [
+        {
+          "when": "resourceFilename =~ /.crank.yml/",
+          "command": "crankScenarioLanguage.runScenario",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "extensionDependencies": [
+    "redhat.vscode-yaml"
+  ],
+  "dependencies": {},
+  "devDependencies": {
+    "@types/glob": "^7.1.1",
+    "@types/mocha": "^5.2.7",
+    "@types/node": "^12.12.7",
+    "glob": "^7.1.5",
+    "mocha": "^6.2.2",
+    "typescript": "^3.6.4",
+    "tslint": "^5.20.0",
+    "vscode": "^1.1.36",
+    "vscode-test": "^1.2.2"
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./ && cp -r src/schema/ out/schema",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "test": "node ./out/test/runTest.js"
+  }
+}

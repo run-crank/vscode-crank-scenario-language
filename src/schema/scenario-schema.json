@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "JSON schema for Crank Scenario files",
+  "type": "object",
+  "required": ["scenario", "description", "steps"],
+  "properties": {
+    "scenario": {
+      "title": "Scenario Name",
+      "description": "The name of the scenario represented by this file.",
+      "type": "string"
+    },
+    "description": {
+      "title": "Scenario Description",
+      "description": "Describes what the scenario validates or proves.",
+      "type": "string"
+    },
+    "tokens": {
+      "title": "Tokens",
+      "description": "An optional map of token names and the values that will be substituted in their place when they are used in step expressions/data.",
+      "type": "object"
+    },
+    "steps": {
+      "title": "Step List",
+      "description": "An ordered list of steps to execute when running this scenario.",
+      "type": "array",
+      "items": {"$ref": "#/definitions/step"}
+    }
+  },
+  "definitions": {
+    "step": {
+      "title": "Step",
+      "description": "Defines a step to be run and the data to supply to it at run-time.",
+      "type": "object",
+      "properties": {
+        "step": {
+          "title": "Step Expression",
+          "type": "string"
+        },
+        "data": {
+          "title": "Step Data",
+          "description": "Explicit data to supply to the step where each key corresponds to the expected field name(s) of the step.",
+          "type": "object"
+        },
+        "failAfter": {
+          "title": "Fail After",
+          "description": "Represents a period of time (in seconds) that this step will be retried before failing the scenario.",
+          "type": "integer"
+        },
+        "waitFor": {
+          "title": "Wait For",
+          "description": "Represents a period of time (in seconds) before this step will be executed.",
+          "type": "integer"
+        },
+        "cog": {
+          "title": "Cog",
+          "description": "The name of the Cog that this step belongs to. Can be supplied in combination with a stepId and data in place of the step property.",
+          "type": "string"
+        },
+        "stepId": {
+          "title": "Step ID",
+          "description": "The unique identifier corresponding to this step. Can be supplied in combination with a cog and data in place of the step property.",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
