@@ -1,7 +1,7 @@
 {
   "name": "crank-scenario-language",
   "displayName": "Crank Scenario Language",
-  "description": "Simplifies Crank Scenario authoring.",
+  "description": "Simplifies the process of authoring and running Crank scenarios.",
   "version": "0.1.0",
   "engines": {
     "vscode": "^1.40.0"
@@ -11,11 +11,20 @@
   ],
   "main": "./out/extension.js",
   "license": "MIT",
+  "homepage": "https://github.com/run-crank/vscode-crank-scenario-language",
   "repository": {
     "type": "git",
     "url": "https://github.com/run-crank/vscode-crank-scenario-language.git"
   },
+  "bugs": {
+    "url": "https://github.com/run-crank/vscode-crank-scenario-language/issues"
+  },
   "publisher": "run-crank",
+  "icon": "images/icon.png",
+  "galleryBanner": {
+    "color": "#b69d65",
+    "theme": "light"
+  },
   "activationEvents": [
     "onLanguage:yaml"
   ],
