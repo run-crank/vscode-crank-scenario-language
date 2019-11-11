@@ -3,6 +3,7 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import * as yaml from 'yaml';
 import * as vscode from 'vscode';
 
 const SCHEMA = 'crankscenarioyml';
@@ -19,6 +20,7 @@ export async function activate(context: vscode.ExtensionContext) {
   registerCogProvider(context);
   registerStepIdProvider(context);
   registerDataKeyProvider(context);
+  registerTokenProvider(context);
 
   // Register commands.
   const runScenarioCommand = vscode.commands.registerCommand('crankScenarioLanguage.runScenario', async (file: vscode.Uri) => {
@@ -179,6 +181,36 @@ function registerDataKeyProvider(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(dataProvider);
+}
+
+function registerTokenProvider(context: vscode.ExtensionContext) {
+  const tokenProvider = vscode.languages.registerCompletionItemProvider(
+    DOC_SELECTOR,
+    {
+      provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
+        let yml;
+        try {
+          yml = yaml.parse(document.getText());
+        } catch (e) {
+          return undefined;
+        }
+
+        // Ignore if there are no tokens.
+        if (!yml || !yml.tokens) {
+          return undefined;
+        }
+
+        return Object.keys(yml.tokens).map((token: string) => {
+          // Note: the first part of the token only includes a single bracket, since the
+          // auto-complete is triggered by typing a single bracket to begin with.
+          return new vscode.CompletionItem(`{${token}}`, vscode.CompletionItemKind.Value);
+        });
+      }
+    },
+    '{',
+  );
+
+  context.subscriptions.push(tokenProvider);
 }
 
 function getClosestLessIndentedLine(indent: number, document: vscode.TextDocument, position: vscode.Position): vscode.TextLine {

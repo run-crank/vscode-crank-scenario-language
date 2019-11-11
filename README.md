@@ -21,6 +21,9 @@ The following features are keyed on the name of a given file ending in
 #### Data IntelliSense
 ![Data IntelliSense](images/data-intellisense.gif)
 
+#### Token IntelliSense
+![Token IntelliSense](images/token-intellisense.gif)
+
 #### Run Scenarios from File Context Menu
 ![Run Scenarios](images/run-scenario.gif)
 

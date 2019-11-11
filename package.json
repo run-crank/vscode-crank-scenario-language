@@ -48,15 +48,18 @@
   "extensionDependencies": [
     "redhat.vscode-yaml"
   ],
-  "dependencies": {},
+  "dependencies": {
+    "yaml": "^1.7.2"
+  },
   "devDependencies": {
     "@types/glob": "^7.1.1",
     "@types/mocha": "^5.2.7",
     "@types/node": "^12.12.7",
+    "@types/yaml": "^1.2.0",
     "glob": "^7.1.5",
     "mocha": "^6.2.2",
-    "typescript": "^3.6.4",
     "tslint": "^5.20.0",
+    "typescript": "^3.6.4",
     "vscode": "^1.1.36",
     "vscode-test": "^1.2.2"
   },

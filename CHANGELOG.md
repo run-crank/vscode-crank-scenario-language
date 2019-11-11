@@ -4,7 +4,10 @@ All notable changes to the "Crank Scenario Language" extension will be documente
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
-## [Unreleased]
+## v0.2.0 - 2019.11.10
+- Added IntelliSense support for defined `{{tokens}}` when present in scenario.
+
+## v0.1.1 - 2019.11.10
 - YAML format specification for `.crank.yml` files.
 - IntelliSense support for step expression text (based on Crank cog registry)
 - IntelliSense support for data keys (based on Crank cog registry)
