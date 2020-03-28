@@ -188,19 +188,10 @@ function registerTokenProvider(context: vscode.ExtensionContext) {
     DOC_SELECTOR,
     {
       provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
-        let yml;
-        try {
-          yml = yaml.parse(document.getText());
-        } catch (e) {
-          return undefined;
-        }
+        const tokens = getTokensAtLine(document, position);
 
-        // Ignore if there are no tokens.
-        if (!yml || !yml.tokens) {
-          return undefined;
-        }
-
-        return Object.keys(yml.tokens).map((token: string) => {
+        // @todo: Support nested token object tokens.
+        return Object.keys(tokens).map((token: string) => {
           // Note: the first part of the token only includes a single bracket, since the
           // auto-complete is triggered by typing a single bracket to begin with.
           return new vscode.CompletionItem(`{${token}}`, vscode.CompletionItemKind.Value);
@@ -225,100 +216,115 @@ function getClosestLessIndentedLine(indent: number, document: vscode.TextDocumen
   return getClosestLessIndentedLine(indent, document, position.translate(-1));
 }
 
-function getCogNameForGivenLine(document: vscode.TextDocument, position: vscode.Position): string | undefined {
+function getTokensAtLine(document: vscode.TextDocument, position: vscode.Position): Record<string, any> {
+  let tokens: Record<string, any> = {};
+
+  // Pull out static tokens defined on the scenario.
+  try {
+    const yml = yaml.parse(document.getText());
+    if (yml.tokens) {
+      tokens = yml.tokens;
+    }
+  } catch (e) {}
+
+  // Pull out dynamic tokens available as of the step on this line.
+  try {
+    getStepAndLineMetadata(document).filter(s => {
+      return s.lineRange.end < position.line + 1;
+    }).forEach(s => {
+      if (!s.fromRegistry || !s.fromRegistry.expectedRecordsList) {
+        return null;
+      }
+
+      const cogToken = s.fromRegistry._cog.split('/')[1];
+      s.fromRegistry.expectedRecordsList.forEach((r: any) => {
+        const tokenPrefix = `${cogToken}.${r.id}`;
+        if (r.guaranteedFieldsList) {
+          r.guaranteedFieldsList.forEach((f: any) => {
+            // KeyValue Record
+            if (r.type === 0) {
+              tokens[`${tokenPrefix}.${f.key}`] = '';
+            }
+            // Table Record
+            else if (r.type === 1) {
+              tokens[`${tokenPrefix}.1.${f.key}`] = '';
+            }
+          });
+
+          // Don't forget to handle when the dynamic tokens are also dynamic.
+          if (r.mayHaveMoreFields) {
+            tokens[`${tokenPrefix}${r.type === 1 ? '.1' : ''}.*`.toLowerCase()] = '';
+          }
+        }
+      });
+    });
+
+  } catch (e) {}
+
+  return tokens;
+}
+
+function getStepAndLineMetadata(document: vscode.TextDocument): any[] {
   const stepRegistry = getStepRegistry();
-  let line = 0;
-  let vscodeLine;
-  let stepText = '';
-  let cog = '';
-  
-  while (line <= position.line) {
-    line = line + 1;
-    vscodeLine = document.lineAt(position.translate(-(line)));
+  const cstDoc = yaml.parseCST(document.getText());
 
-    // If we encounter a line containing "step", pull out the step text and
-    // immediately break from the loop.
-    if (vscodeLine.text.includes('step: ')) {
-      stepText = (/step:\s+(.*)/g.exec(vscodeLine.text) || [])[1];
-      break;
-    }
+  // Check for any items at all.
+  const docContents: any = cstDoc[0]['contents'][0];
+  if (!docContents || !docContents.items) {
+    return [];
+  }
+  const docItems = docContents.items;
 
-    // If we encounter a line containing "cog," pull out the cog name, but
-    // continue iterating (we may not have a stepId yet).
-    if (vscodeLine.text.includes('cog: ')) {
-      cog = (/cog:\s+(.*)/g.exec(vscodeLine.text) || [])[1];
-    }
-
-    // If we encounter a line beginning with "-" then we most likely reached
-    // the end of this step definition. Break.
-    if (vscodeLine.text.startsWith('-')) {
-      break;
-    }
+  // Check for a "steps" key.
+  const stepsPlainValueIndex = docItems.findIndex((i: any) => i.type && i.type === 'PLAIN' && i.strValue && i.strValue === 'steps');
+  if (stepsPlainValueIndex === -1 ) {
+    return [];
   }
 
-  if (stepText) {
-    return (stepRegistry.find(step => {
-      return stepText.match(new RegExp(step.expression)) || step.expression === stepText;
-    }) || {})._cog;
+  // Check for corresponding steps.
+  const docSteps = docItems[stepsPlainValueIndex + 1];
+  if (!docSteps || !docSteps.node || docSteps.node.type !== 'SEQ') {
+    return [];
   }
 
-  if (cog) {
-    return cog;
-  }
+  // Iterate through each step, pull the corresponding step definition.
+  // And note its line number / context.
+  return docSteps.node.items.map((i: any) => {
+    const asObject = yaml.parse(i.rawValue)[0];
+    return {
+      lineRange: {
+        start: i.rangeAsLinePos.start.line,
+        end: i.rangeAsLinePos.end.line - 1,
+      },
+      asObject: asObject,
+      fromRegistry: ((obj) => {
+        // Match step expressions to steps.
+        if (obj.step) {
+          return stepRegistry.find(step => {
+            return obj.step.match(new RegExp(step.expression, 'i')) || obj.step === step.expression;
+          });
+        }
+        // Otherwise, if a specific step/cog was provided. Sweet.
+        if (obj.cog && obj.stepId) {
+          return stepRegistry.find(step => {
+            return step._cog === obj.cog && step.stepId === obj.stepId;
+          });
+        }
+      })(asObject),
+    }
+  });
+}
 
+function getCogNameForGivenLine(document: vscode.TextDocument, position: vscode.Position): string | undefined {
+  const steps = getStepAndLineMetadata(document);
+  const step = steps.find(s => s.lineRange.start <= position.line + 1 && s.lineRange.end >= position.line + 1);
+  return step && step.fromRegistry ? step.fromRegistry._cog : step.asObject.cog;
 }
 
 function getStepForGivenLine(document: vscode.TextDocument, position: vscode.Position): Record<string, any> | undefined {
-  const stepRegistry = getStepRegistry();
-  let line = 0;
-  let vscodeLine;
-  let stepText = '';
-  let cog = '';
-  let stepId = '';
-
-  while (line <= position.line) {
-    line = line + 1;
-    vscodeLine = document.lineAt(position.translate(-(line)));
-
-    // If we encounter a line containing "step", pull out the step text and
-    // immediately break from the loop.
-    if (vscodeLine.text.includes('step: ')) {
-      stepText = (/step:\s+(.*)/g.exec(vscodeLine.text) || [])[1];
-      break;
-    }
-
-    // If we encounter a line containing "cog," pull out the cog name, but
-    // continue iterating (we may not have a stepId yet).
-    if (vscodeLine.text.includes('cog: ')) {
-      cog = (/cog:\s+(.*)/g.exec(vscodeLine.text) || [])[1];
-    }
-
-    // If we encounter a line containing "stepId," pull out the stepId, but
-    // continue iterating (we may not have a cog yet).
-    if (vscodeLine.text.includes('stepId: ')) {
-      stepId = (/stepId:\s+(.*)/g.exec(vscodeLine.text) || [])[1];
-    }
-
-    // If we encounter a line beginning with "-" then we most likely reached
-    // the end of this step definition. Break.
-    if (vscodeLine.text.trim().startsWith('-')) {
-      break;
-    }
-  }
-
-  if (stepText) {
-    return stepRegistry.find(step => {
-      return stepText.match(new RegExp(step.expression)) || stepText === step.expression;
-    });
-  }
-
-  if (cog && stepId) {
-    return stepRegistry.find(step => {
-      return step._cog === cog && step.stepId === stepId;
-    });
-  }
-
-  return undefined;
+  const steps = getStepAndLineMetadata(document);
+  const step = steps.find(s => s.lineRange.start <= position.line + 1 && s.lineRange.end >= position.line + 1);
+  return step ? step.fromRegistry : undefined;
 }
 
 ////////
