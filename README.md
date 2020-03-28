@@ -25,7 +25,7 @@ The following features are keyed on the name of a given file ending in
 ![Token IntelliSense](images/token-intellisense.gif)
 
 #### Dynamic Token IntelliSense
-![Dynamic Token Support](images/dynamic-token/intellisense.gif)
+![Dynamic Token Support](images/dynamic-token-intellisense.gif)
 
 #### Run Scenarios from File Context Menu
 ![Run Scenarios](images/run-scenario.gif)
